@@ -1,14 +1,15 @@
 
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
-//std::string filename = "TestInput.txt";
+//std::string Filename = "TestInput.txt";
 std::string Filename = "Input.txt";
 
-int main(int argc, char* argv[])
+int main(int InArgc, char* INArgv[])
 {
     std::ifstream inputFile;
 
@@ -21,6 +22,7 @@ int main(int argc, char* argv[])
 
     std::string inputLine;
     std::vector<std::vector<int32_t>> elfCalories;
+    elfCalories.reserve(100);
     elfCalories.emplace_back();
     while (!inputFile.eof())
     {
@@ -31,7 +33,8 @@ int main(int argc, char* argv[])
             elfCalories.back().emplace_back(std::atoi(inputLine.c_str()));
     }
 
-    int32_t maxElfCarry = -1;
+    std::vector<int32_t> elfCarryWeights;
+    elfCarryWeights.reserve(100);
 
     for (auto& elf : elfCalories)
     {
@@ -39,9 +42,20 @@ int main(int argc, char* argv[])
         for (const auto calories : elf)
             currentElfCalories += calories;
         
-        maxElfCarry = std::max(maxElfCarry, currentElfCalories);
+        elfCarryWeights.emplace_back(currentElfCalories);
+    }
+    // Sort descending
+    auto descendingIntegerSort = [](const int32_t& InA, const int32_t& InB) { return InA > InB; };
+    std::ranges::sort(elfCarryWeights, descendingIntegerSort);
+
+
+    int32_t calCounter = 0;
+    constexpr int32_t topNumberOfElves = 3;
+    for (int32_t a = 0; a < topNumberOfElves; ++a)
+    {
+        calCounter += elfCarryWeights[a];
     }
     
-    std::cout << "Max calories found: " << maxElfCarry  << std::endl;
+    std::cout << "Max calories found: " << calCounter  << std::endl;
     return 0;
 }
