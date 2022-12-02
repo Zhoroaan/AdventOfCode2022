@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
 {
@@ -26,12 +26,20 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
     elfCalories.reserve(100);
     elfCalories.emplace_back();
     std::vector<std::pair<char, char>> inputData;
-    std::map<char, char> inputMapping =
+    std::map<char, char> loseMapping =
         {
-        {'X', 'A'},
-        {'Y', 'B'},
-        {'Z', 'C'}
+        {'A', 'C'},
+        {'B', 'A'},
+        {'C', 'B'}
         };
+
+    std::map<char, char> winMapping =
+    {
+        {'A', 'B'},
+        {'B', 'C'},
+        {'C', 'A'}
+    };
+    
     while (!inputFile.eof())
     {
         std::getline(inputFile, inputLine);
@@ -42,13 +50,15 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
             return 2;
         }
 
-        char pickedResponse = inputLine[2];
-        if (!inputMapping.contains(pickedResponse))
-        {
-            std::cerr << "Invalid response action: " << pickedResponse << std::endl;
-            return 3;
-        }
-        inputData.emplace_back(std::pair<char, char>{inputLine[0], inputMapping[pickedResponse]});
+        char pickedResponse = 0;
+        if (inputLine[2] == 'X')
+            pickedResponse = loseMapping[inputLine[0]];
+        if (inputLine[2] == 'Y')
+            pickedResponse = inputLine[0];
+        if (inputLine[2] == 'Z')
+            pickedResponse = winMapping[inputLine[0]];
+        
+        inputData.emplace_back(std::pair<char, char>{inputLine[0], pickedResponse});
     }
 
     std::map<char, int32_t> scoreMapping =
@@ -56,13 +66,6 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         {'A', 1},
         {'B', 2},
         {'C', 3}
-        };
-
-    std::map<char, char> winMapping =
-        {
-        {'A', 'B'},
-        {'B', 'C'},
-        {'C', 'A'}
         };
 
     int32_t score = 0;
