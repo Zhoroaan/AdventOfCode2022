@@ -1,24 +1,34 @@
 #include <fstream>
 #include <iostream>
 #include <locale>
-#include <map>
 #include <string>
-#include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
-char FindCommon(const auto& pack1, const auto& pack2)
+char FindCommon(const auto& InGroup1, const auto& InGroup2, const auto& InGroup3)
 {
-    for (auto itemType : pack1)
+    for (auto itemType : InGroup1)
     {
-        for (auto itemType2 : pack2)
+        for (auto itemType2 : InGroup2)
         {
             if (itemType == itemType2)
-                return itemType;
+            {
+                for (auto itemType3 : InGroup3)
+                {
+                    if (itemType == itemType3)
+                        return itemType;
+                }
+            }
         }
     }
     return 0;
+}
+
+auto CalculateScore(char InItemType)
+{
+    const auto offset = std::isupper(InItemType) ? 'A'  : 'a';
+    return InItemType - offset + (std::isupper(InItemType) ? 27 : 1);
 }
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
@@ -32,30 +42,26 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         return 1;
     }
 
-    std::string inputLine;
     int32_t scoreCounter = 0;
     while (!inputFile.eof())
     {
-        std::getline(inputFile, inputLine);
+        std::string group1;
+        std::getline(inputFile, group1);
+        if (group1.length() == 0)
+            continue;
         
-        if (inputLine.length() % 2 == 1)
-        {
-            std::cerr << "Invalid input line:  " << inputLine << std::endl;
-            return 2;
-        }
-        const size_t count = inputLine.length() / 2;
-        auto pack1 = inputLine.substr(0, count);
-        auto pack2 = inputLine.substr(count, count);
-        char common = FindCommon(pack1, pack2);
+        std::string group2, group3;
+        std::getline(inputFile, group2);
+        std::getline(inputFile, group3);
+        
+        char common = FindCommon(group1, group2, group3);
         if (common == 0)
         {
-            std::cerr << "Found no common slot for:  " << pack1 << " and " << pack2 << std::endl;
+            std::cerr << "Found no common slot for:  " << group1 << ", " << group2 << " and " << group3 << std::endl;
             return 3;
         }
-        const auto offset = std::isupper(common) ? 'A'  : 'a';
-        scoreCounter +=  common - offset + (std::isupper(common) ? 27 : 1);
+        scoreCounter += CalculateScore(common);
     }
-
 
     std::cout << "Sum: " << scoreCounter << std::endl;
 
