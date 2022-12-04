@@ -1,10 +1,11 @@
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <locale>
 #include <string>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 struct Range
 {
@@ -16,6 +17,13 @@ struct Range
         return InOther.Start >= Start
                 && InOther.End <= End;
     }
+    [[nodiscard]] int32_t HasEnyOverlapping(const Range& InOther) const
+    {
+        for (int32_t start = std::max(Start, InOther.Start); start <= std::min(End, InOther.End); ++start)
+            return true;
+
+        return false;
+    }
 };
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
@@ -23,11 +31,6 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
     std::ifstream inputFile;
 
     inputFile.open(Filename);
-    if (!inputFile.is_open())
-    {
-        std::cerr << "Unable to find file " << Filename << std::endl;
-        return 1;
-    }
     std::string inputLine;
     int32_t numOverlaps = 0;
     while (!inputFile.eof())
@@ -35,9 +38,9 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         std::getline(inputFile, inputLine);
 
         Range range1, range2;
-        int found = sscanf_s(inputLine.c_str(), "%d-%d,%d-%d", &range1.Start, &range1.End, &range2.Start, &range2.End);
-        int breakHere = 2;
-        numOverlaps += range1.IsEncapsulating(range2) || range2.IsEncapsulating(range1);
+        const int found = sscanf_s(inputLine.c_str(), "%d-%d,%d-%d", &range1.Start, &range1.End, &range2.Start, &range2.End);
+        assert(found == 4);
+        numOverlaps += range1.HasEnyOverlapping(range2) ? 1 : 0;
     }
 
     std::cout << "Number of overlaps: " << numOverlaps << std::endl;
