@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
         if (readingStart)
         {
-            for (int bucketStart = 0; bucketStart < inputLine.length(); bucketStart += 4)
+            for (auto bucketStart = 0; bucketStart < static_cast<int>(inputLine.length()); bucketStart += 4)
             {
                 if (inputLine[bucketStart] != '[')
                     continue;
