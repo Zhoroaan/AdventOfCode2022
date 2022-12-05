@@ -1,13 +1,11 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
-#include <locale>
 #include <string>
 #include <vector>
-#include <ranges>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 int main(int argc, char* argv[])
 {
@@ -20,12 +18,12 @@ int main(int argc, char* argv[])
     while (!inputFile.eof())
     {
         std::getline(inputFile, inputLine);
-        if (buckets.size() == 0)
+        if (buckets.empty())
         {
-            int32_t bucketCount = static_cast<int32_t>(inputLine.length() + 1) / 4;
+            const int32_t bucketCount = static_cast<int32_t>(inputLine.length() + 1) / 4;
             buckets.reserve(bucketCount);
             for (int a = 0; a < bucketCount; ++a)
-                buckets.push_back({});
+                buckets.emplace_back();
         }
         if (inputLine.length() == 0)
         {
@@ -39,23 +37,26 @@ int main(int argc, char* argv[])
         {
             for (int bucketStart = 0; bucketStart < inputLine.length(); bucketStart += 4)
             {
-                if (inputLine[bucketStart] == '[')
-                {
-                    buckets[bucketStart / 4].push_back(inputLine[bucketStart + 1]);
-                }
+                if (inputLine[bucketStart] != '[')
+                    continue;
+                buckets[bucketStart / 4].push_back(inputLine[bucketStart + 1]);
             }
         }
         else
         {
             int32_t count, sourceBucket, targetBucket;
-            auto found =sscanf_s(inputLine.c_str(), "move %d from %d to %d", &count, &sourceBucket, &targetBucket);
+            const auto found =sscanf_s(inputLine.c_str(), "move %d from %d to %d", &count, &sourceBucket, &targetBucket);
             assert(found == 3);
-            for (int a = 0; a < count; ++a)
+            for (int pickupBox = 0; pickupBox < count; ++pickupBox)
             {
-                buckets[targetBucket - 1].push_back(buckets[sourceBucket - 1].back());
+                const auto offset = - count + pickupBox;
+                auto element = buckets[sourceBucket - 1].end() + offset;
+                buckets[targetBucket - 1].push_back(*element);
+            }
+            for (int removeIt = 0; removeIt < count; ++removeIt)
+            {
                 buckets[sourceBucket - 1].pop_back();
             }
-            int breakHere = 2;
         }
         
     }
