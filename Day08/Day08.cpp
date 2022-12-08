@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
 {
@@ -24,31 +24,33 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         
         height++;
     }
-    int count = 0;
+    uint64_t maxScore = 0;
     for (int y = 1; y < height - 1; ++y)
     {
         for (int x = 1; x < width - 1; ++x)
         {
-            bool leftVisible = true;
-            for (int cx = x - 1; cx >= 0; cx--)
-                leftVisible &= heightData[y * width + x] > heightData[y * width + cx];
-            bool rightVisible = true;
-            for (int cx = x + 1; cx < width; cx++)
-                rightVisible &= heightData[y * width + x] > heightData[y * width + cx];
-            bool upVisible = true;
-            for (int cy = y - 1; cy >= 0; cy--)
-                upVisible &= heightData[y * width + x] > heightData[cy * width + x];
-            bool downVisible = true;
-            for (int cy = y + 1; cy < height; cy++)
-                downVisible &= heightData[y * width + x] > heightData[cy * width + x];
+            // Add the number of trees I can see over with a tree beyond them
+            uint64_t leftVisible = 1;
+            for (int cx = x - 1; cx >= 1 && heightData[y * width + x] > heightData[y * width + cx]; cx--)
+                leftVisible++;
+            
+            uint64_t rightVisible = 1;
+            for (int cx = x + 1; cx < width - 1 && heightData[y * width + x] > heightData[y * width + cx]; cx++)
+                rightVisible++;
+            
+            uint64_t upVisible = 1;
+            for (int cy = y - 1; cy >= 1 && heightData[y * width + x] > heightData[cy * width + x]; cy--)
+                upVisible++;
+            
+            uint64_t downVisible = 1;
+            for (int cy = y + 1; cy < height - 1 && heightData[y * width + x] > heightData[cy * width + x]; cy++)
+                downVisible++;
 
-            if (leftVisible || rightVisible || upVisible || downVisible)
-                count++;
+            maxScore = std::max(maxScore, leftVisible * rightVisible * upVisible * downVisible);
         }
     }
-    const int edgeCount = width * 2 + height * 2 - 4;
 
-    std::cout << "Visible trees found: " << count + edgeCount << std::endl;
+    std::cout << "Max Score found: " << maxScore << std::endl;
     
     return 0;
 }
