@@ -1,12 +1,12 @@
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <set>
 #include <sstream>
 #include <string>
-#include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 class TrackPosition
 {
@@ -23,10 +23,11 @@ public:
             PosY--;
     }
 
-    int16_t DistanceTo(const TrackPosition& InOther)
+    int16_t DistanceTo(const TrackPosition& InOther) const
     {
         return std::max(std::abs(PosX - InOther.PosX), std::abs(PosY - InOther.PosY));
     }
+    
     void MoveTowards(const TrackPosition& InOther)
     {
         if (DistanceTo(InOther) <= 1)
@@ -64,7 +65,7 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
 
     inputFile.open(Filename);
     std::string inputLine;
-    TrackPosition head, tail;
+    std::array<TrackPosition, 10> positions;
     std::set<int32_t> uniquePositions;
     while (!inputFile.eof())
     {
@@ -74,14 +75,17 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         int16_t stepCount = std::numeric_limits<int16_t>::min();
         l >> direction >>stepCount;
         //std::cout << direction << ": " << stepCount << std::endl;
-        for (int a = 0; a < stepCount; ++a)
+        for (int16_t stepIndex = 0; stepIndex < stepCount; ++stepIndex)
         {
-            head.MoveDirection(direction);
-            tail.MoveTowards(head);
+            positions[0].MoveDirection(direction);
+            for (size_t chainIndex = 1; chainIndex < positions.size(); ++chainIndex)
+            {
+                positions[chainIndex].MoveTowards(positions[chainIndex-1]);
+            }
             //std::cout << "Head: " << head << std::endl;
             //std::cout << "Tail: " << tail << std::endl;
             //std::cout << "Tail hash: " << tail.GetHash() << std::endl;
-            uniquePositions.emplace(tail.GetHash());
+            uniquePositions.emplace(positions.back().GetHash());
         }
     }
     
