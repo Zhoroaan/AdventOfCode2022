@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 enum class MonkeyOperation
 {
@@ -19,7 +19,7 @@ enum class MonkeyOperation
 class Monkey
 {
 public:
-    void AddItem(int32_t InItemWorry)
+    void AddItem(int64_t InItemWorry)
     {
         ItemWorries.emplace_back(InItemWorry);
     }
@@ -44,9 +44,9 @@ public:
         MonkeyThrowToo[InIfTrue ? 0 : 1] = InMonkeyIndex;
     }
 
-    int32_t GetItemInspectionCount() const { return ItemInspections; }
+    [[nodiscard]] int64_t GetItemInspectionCount() const { return ItemInspections; }
 
-    void RunIteration(std::vector<Monkey>& InMonkeys)
+    void RunIteration(std::vector<Monkey>& InMonkeys, int64_t InCommonBase)
     {
         for (auto itemWorry : ItemWorries)
         {
@@ -58,9 +58,9 @@ public:
             else
                 itemWorry *= itemWorry;
 
-            itemWorry = itemWorry / 3;
+            itemWorry %= InCommonBase;
 
-            int targetMonkey = itemWorry % TestValue == 0 ? MonkeyThrowToo[0] : MonkeyThrowToo[1];
+            const int targetMonkey = itemWorry % TestValue == 0 ? MonkeyThrowToo[0] : MonkeyThrowToo[1];
             InMonkeys[targetMonkey].AddItem(itemWorry);
                 
         }
@@ -72,8 +72,8 @@ protected:
     int32_t OperationValue = 0;
     int32_t TestValue = 1;
     int32_t MonkeyThrowToo[2] = {-1, -1};
-    std::vector<int32_t> ItemWorries;
-    int32_t ItemInspections = 0;
+    std::vector<int64_t> ItemWorries;
+    int64_t ItemInspections = 0;
 };
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
@@ -83,6 +83,7 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
     inputFile.open(Filename);
     std::string inputLine;
     std::vector<Monkey> monkeys;
+    int64_t commonBase = 1;
     while (inputFile.is_open() && !inputFile.eof())
     {
         std::getline(inputFile, inputLine);
@@ -122,7 +123,9 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         {
              if (const auto index = inputLine.find_last_of(' '); index != std::string::npos)
              {
-                 monkeys.back().SetTestValue(std::atoi(inputLine.c_str() + index + 1));
+                 int testValue = std::atoi(inputLine.c_str() + index + 1);
+                 commonBase *= testValue;
+                 monkeys.back().SetTestValue(testValue);
              }
         }
         else if (const char trueM = inputLine[7]; trueM  == 't' || trueM == 'f')
@@ -132,11 +135,11 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         }
     }
 
-    for (int rounds = 0; rounds < 20; ++rounds)
+    for (int rounds = 0; rounds < 10000; ++rounds)
     {
         for (auto& monkey : monkeys)
         {
-            monkey.RunIteration(monkeys);
+            monkey.RunIteration(monkeys, commonBase);
         }
     }
 
