@@ -3,13 +3,12 @@
 #include <charconv>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <ranges>
 #include <string>
 #include <vector>
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 struct Position
 {
@@ -52,7 +51,7 @@ std::vector<Position> GetValidMoves(const Position& InPos, const std::vector<std
 {
     std::vector<Position> returnVector;
 
-    std::array<Position, 4> dirExplore = {Position{-1, 0}, Position{0, 1}, Position{1, 0}, Position{0, -1}};
+    const std::array dirExplore = {Position{-1, 0}, Position{0, 1}, Position{1, 0}, Position{0, -1}};
 
     for (const Position& direction : dirExplore)
     {
@@ -83,58 +82,12 @@ std::vector<Position> GetValidMoves(const Position& InPos, const std::vector<std
     return returnVector;
 }
 
-std::ostream& operator<<(std::ostream& InOStream, const Position& InPos)
+int32_t CountMoveSteps(const Position& InStart, const Position& InEnd, const std::vector<std::string>& InHeightData)
 {
-    return InOStream << "Position X: " << InPos.X << " Y: " << InPos.Y;
-}
-
-
-char GetArrowFromLocations(const Position& InCurrentPosition, const Position& InPreviousPosition)
-{
-    if (InPreviousPosition.X < InCurrentPosition.X)
-        return '>';
-    if (InPreviousPosition.X > InCurrentPosition.X)
-        return '<';
-    if (InPreviousPosition.Y < InCurrentPosition.Y)
-        return 'v';
-    if (InPreviousPosition.Y > InCurrentPosition.Y)
-        return '^';
-
-    return '-';
-}
-
-int main(int /*InArgc*/, char* /*InArgv[]*/)
-{
-    std::ifstream inputFile;
-
-    inputFile.open(Filename);
-    std::string inputLine;
-    std::vector<std::string> data;
-    Position start, end;
-    while (inputFile.is_open() && !inputFile.eof())
-    {
-        std::getline(inputFile, inputLine);
-        for (int a = 0; a < inputLine.length(); ++a)
-        {
-            char& height = inputLine[a];
-            if (height == 'S')
-            {
-                start = {a, static_cast<int>(data.size())};
-                height = 'a';
-            }
-            if (height == 'E')
-            {
-                end = {a, static_cast<int>(data.size())};
-                height = 'z';
-            }
-        }
-        data.emplace_back(inputLine);
-    }
-
     std::vector<Leaf> open;
     std::vector<Leaf> closed;
 
-    open.emplace_back(0, start);
+    open.emplace_back(0, InStart);
 
     bool foundEnd = false;
     int32_t endCost = 0;
@@ -143,13 +96,13 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         const auto currentPos = open[0].CurrentPosition;
         const auto currentCost = open[0].Cost;
 
-        std::vector<Position> directionsToExplore = GetValidMoves(currentPos, data, closed, open);
+        std::vector<Position> directionsToExplore = GetValidMoves(currentPos, InHeightData, closed, open);
         closed.emplace_back(open[0]);
         open.erase(open.begin());
         
         for (const auto& newPosition : directionsToExplore)
         {
-            if (newPosition == end)
+            if (newPosition == InEnd)
             {
                 foundEnd = true;
                 closed.emplace_back(currentCost + 1, newPosition, currentPos);
@@ -161,34 +114,53 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
 
         
         std::ranges::sort(open, [] (const auto& InA, const auto& InB) { return InA.Cost < InB.Cost;});
-        int breakHere = 2;
     }
+    return endCost;
+}
 
-    Position searcher = end;
-    std::vector<std::string> outputArea;
-    for (auto& inputLine : data)
+int main(int /*InArgc*/, char* /*InArgv[]*/)
+{
+    std::ifstream inputFile;
+
+    inputFile.open(Filename);
+    std::string inputLine;
+    std::vector<std::string> data;
+    Position end;
+    while (inputFile.is_open() && !inputFile.eof())
     {
-        std::string temp;
-        for (auto line : inputLine)
+        std::getline(inputFile, inputLine);
+        for (int a = 0; a < inputLine.length(); ++a)
         {
-            temp += '.';
+            char& height = inputLine[a];
+            if (height == 'S')
+                height = 'a';
+            if (height == 'E')
+            {
+                end = {a, static_cast<int>(data.size())};
+                height = 'z';
+            }
         }
-        outputArea.push_back(temp);
-    }
-    
-    while (searcher != start)
-    {
-        auto found = std::ranges::find_if(closed, [&searcher](const auto& InLeaf) {return InLeaf.CurrentPosition == searcher;});
-        char arrow= GetArrowFromLocations(found->CurrentPosition, found->WalkedFrom);
-        searcher = found->WalkedFrom;
-        outputArea[searcher.Y][searcher.X] = arrow;
+        data.emplace_back(inputLine);
     }
 
-    for (auto& outputArea : outputArea)
+
+    std::vector<Position> startPositions;
+    for(size_t y = 0; y < data.size(); ++y)
     {
-        std::cout << outputArea << std::endl;
+        for(size_t x = 0; x < data[y].length(); ++x)
+        {
+            if (data[y][x] == 'a')
+                startPositions.emplace_back(static_cast<int>(x), static_cast<int>(y));
+        }
+    }
+    int32_t minCost = std::numeric_limits<int32_t>::max();
+    for (auto& startPosition : startPositions)
+    {
+        const int32_t steps = CountMoveSteps(startPosition, end, data);
+        if (steps != 0)
+            minCost = std::min(minCost, CountMoveSteps(startPosition, end, data));
     }
     
-    std::cout << "Number of steps: " << endCost << std::endl;
+    std::cout << "Number of steps: " << minCost << std::endl;
     return 0;
 }
