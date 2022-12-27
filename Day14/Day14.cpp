@@ -37,7 +37,7 @@ public:
         }
     }
 
-    bool RunSand()
+    bool RunSand(int InMaxHeight)
     {
         Grid& grid = *this;
         int x = 500, y = 0;
@@ -45,21 +45,24 @@ public:
         {
             if (y > GridSize)
                 return false;
+            bool okNewHeight = (y + 1) < InMaxHeight;
             
-            if (grid[x][y+1] == '.')
+            if (okNewHeight && grid[x][y+1] == '.')
             {
                 y++;
             }
-            else if (grid[x - 1][y + 1] == '.')
+            else if (okNewHeight && grid[x - 1][y + 1] == '.')
             {
                 x--;
                 y++;
             }
-            else if (grid[x + 1][y + 1] == '.')
+            else if (okNewHeight && grid[x + 1][y + 1] == '.')
             {
                 x++;
                 y++;
             }
+            else if (y == 0)
+                return false;
             else
             {
                 grid[x][y] = 'o';
@@ -98,6 +101,7 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
     
     inputFile.open(Filename);
     std::string inputLine;
+    int topY = 0;
     while (inputFile.is_open() && !inputFile.eof())
     {
         std::getline(inputFile, inputLine);
@@ -112,22 +116,20 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
             std::stringstream ss(entry);
             int x = 0, y = 0;
             ss >> x, ss.ignore(1), ss >> y;
+            if (y > topY)
+                topY = y;
             bool newValue = prevY == -1;
             if (!newValue)
-            {
-                // Draw Line
                 DrawLine(grid, prevX, prevY, x, y);
-            }
             prevX = x;
             prevY = y;
         }
     }
     grid[500][0] = '+';
-    grid.Print();
     int32_t counter = 0;
-    while (grid.RunSand())
+    while (grid.RunSand(topY + 2))
         counter++;
     
-    std::cout << "Num stacked: " << counter << std::endl;
+    std::cout << "Num stacked: " << counter + 1 << std::endl;
     return 0;
 }
