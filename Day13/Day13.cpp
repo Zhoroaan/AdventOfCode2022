@@ -8,8 +8,8 @@
 #include <vector>
 
 
-//std::string Filename = "TestInput.txt";
-std::string Filename = "Input.txt";
+std::string Filename = "TestInput.txt";
+//std::string Filename = "Input.txt";
 
 enum class PacketType
 {
@@ -35,17 +35,18 @@ enum class PacketOrder : uint8_t
 
 struct Packet
 {
-    Packet(PacketType InType, int InValue = 0)
-        : Type(InType), Value(InValue) {
+    Packet(PacketType InType, int InValue = 0, const std::string& InStringRespresentation = "")
+        : Type(InType), Value(InValue), StringRepresentation(InStringRespresentation) {
         
     }
+    std::string StringRepresentation;
     PacketType Type;
     std::vector<std::shared_ptr<Packet>> Packages;
     int Value;
     
     static std::shared_ptr<Packet> ParsePackage(const std::string& InInputData)
     {
-        std::shared_ptr<Packet> package = std::make_shared<Packet>(PacketType::List);
+        std::shared_ptr<Packet> package = std::make_shared<Packet>(PacketType::List, 0, InInputData);
         std::vector<std::shared_ptr<Packet>> packageStack;
         packageStack.emplace_back(package);
         for (size_t dataIndex = 0; dataIndex < InInputData.size(); ++dataIndex)
@@ -75,16 +76,11 @@ struct Packet
     {
         if (InShared->Type == PacketType::Value && Type == PacketType::Value)
         {
-            //std::cout << "Compare " << Value << " with " << InShared->Value << std::endl;
             if( Value < InShared->Value)
-            {
-            //    std::cout << "Left side is smaller so items are in the right order!" << std::endl;
                 return PacketOrder::Correct;
-            }
             if (Value == InShared->Value)
                 return PacketOrder::Unknown;
 
-            //std::cout << "Right side is smaller so items are in the wrong order!" << std::endl;
             return PacketOrder::Wrong;
         }
         if(InShared->Type == PacketType::Value)
@@ -102,10 +98,7 @@ struct Packet
         for (size_t a = 0; a < Packages.size(); ++a)
         {
             if (InShared->Packages.size() <= a)
-            {
-                //std::cout << "Ran out of element on right side" << std::endl;
                 return PacketOrder::Wrong;
-            }
 
             const PacketOrder compareResult = Packages[a]->IsSmallerThan(InShared->Packages[a]);
             if (compareResult == PacketOrder::Unknown)
@@ -113,7 +106,6 @@ struct Packet
             
             return compareResult;
         }
-        //std::cout << "Ran out of element on left side" << std::endl;
         return Packages.size() == InShared->Packages.size() ? PacketOrder::Unknown : PacketOrder::Correct;
     }
 };
@@ -123,29 +115,30 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
     std::ifstream inputFile;
 
     inputFile.open(Filename);
-    std::string inputLineLeft;
-    std::string inputLineRight;
-    int readLines = 0;
-    int32_t counter = 0;
+    std::string inputLine;
+    std::vector<std::shared_ptr<Packet>> packets;
     while (inputFile.is_open() && !inputFile.eof())
     {
-        std::getline(inputFile, inputLineLeft);
-        if (inputLineLeft.size() == 0)
+        std::getline(inputFile, inputLine);
+        if (inputLine.empty())
             continue;
-        std::shared_ptr<Packet> leftPacket = std::move(Packet::ParsePackage(inputLineLeft));
-        std::getline(inputFile, inputLineRight);
-        std::shared_ptr<Packet> rightPacket = std::move(Packet::ParsePackage(inputLineRight));
-        readLines++;
-        //std::cout << "Testing " << readLines << std::endl;
-
-        auto packetOrder = leftPacket->IsSmallerThan(rightPacket);
-        if (packetOrder == PacketOrder::Correct)
-        {
-            std::cout << "Smaller found at " <<  readLines << std::endl;
-            counter+= readLines;
-        }
-        //std::cout << inputLineLeft << (leftSmallest ? " smaller than " : " bigger than ") << inputLineRight << std::endl;
+        packets.emplace_back(std::move(Packet::ParsePackage(inputLine)));
     }
-    std::cout << "Answer is " << counter << std::endl;
+    packets.emplace_back(std::move(Packet::ParsePackage("[[2]]")));
+    packets.emplace_back(std::move(Packet::ParsePackage("[[6]]")));
+    std::ranges::sort(packets, [] (const auto& InA, const auto& InB)
+    {
+       return InA->IsSmallerThan(InB) == PacketOrder::Correct; 
+    });
+    int counter = 1;
+    for (size_t a = 0; a < packets.size(); ++a)
+    {
+        const auto& packet = packets[a];
+        if (packet->StringRepresentation == "[[2]]"
+            || packet->StringRepresentation == "[[6]]")
+                counter *= (a + 1);
+        //std::cout << packet->StringRepresentation << std::endl;
+    }
+    std::cout << "Answer is: " << counter << std::endl;
     return 0;
 }
