@@ -3,28 +3,88 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 std::string Filename = "TestInput.txt";
+constexpr int64_t CheckExtent = 20;
 //std::string Filename = "Input.txt";
+//constexpr int64_t CheckExtent = 4000000;
+
+
+constexpr int ThreadCount = 23;
+
+class Timer
+{
+public:
+    Timer(const char* InName)
+        : Name(InName)
+    {
+        StartTime = std::chrono::high_resolution_clock::now();
+    }
+    ~Timer()
+    {
+        auto span  = std::chrono::high_resolution_clock::now() - StartTime;
+        std::cout << Name << " - Duration: " << std::chrono::duration<double>(span) << std::endl;
+    }
+protected:
+    std::chrono::high_resolution_clock::time_point StartTime;
+    const char* Name;
+};
 
 struct Vector2
 {
     int64_t X = 0;
 	int64_t Y = 0;
 
-    [[nodiscard]] int64_t ManDistance(Vector2 InOther) const
+    [[nodiscard]] int64_t ManDistance(const Vector2& InOther) const noexcept
     {
-        return std::abs(X - InOther.X) + std::abs(Y - InOther.Y);
+        auto distX = std::abs(X - InOther.X);
+        auto distY = std::abs(Y - InOther.Y);
+        return distX + distY; //std::abs(X - InOther.X) + std::abs(Y - InOther.Y);
+    }
+
+    [[nodiscard]] bool ManDistanceWithin(const Vector2& InOther, int64_t InDist) const noexcept
+    {
+        const auto distX = std::abs(X - InOther.X);
+        if (distX > InDist)
+            return false;
+        const auto distY = std::abs(Y - InOther.Y);
+        return  (distX + distY) <= InDist; //std::abs(X - InOther.X) + std::abs(Y - InOther.Y);
     }
 
     bool operator==(const Vector2& InOther) const = default;
 };
 
-struct TargetPositon
+struct TargetPosition
 {
-    TargetPositon(Vector2 InPos, Vector2 InClosest)
-        : Position(InPos), BeaconPosition(InClosest), ClosestDistance(InPos.ManDistance(InClosest))
-    {}
+    TargetPosition(Vector2 InPos, Vector2 InClosest)  noexcept
+        : Position(InPos), BeaconPosition(InClosest),
+          ClosestDistance(InPos.ManDistance(InClosest))
+    {
+        MinBounds = {
+            std::min(Position.X, BeaconPosition.X) - ClosestDistance,
+                    std::min(Position.Y, BeaconPosition.Y) - ClosestDistance
+        };
+
+        MaxBounds = {
+            std::max(Position.X, BeaconPosition.X) + ClosestDistance,
+                    std::max(Position.Y, BeaconPosition.Y) + ClosestDistance
+        };
+    }
+
+    [[nodiscard]] bool IsWithinBounds(const Vector2& InPosition) const noexcept
+    {
+        return InPosition.X >= MinBounds.X && InPosition.X <= MaxBounds.X
+            && InPosition.Y >= MinBounds.Y && InPosition.Y <= MaxBounds.Y;
+    }
+
+    bool IsWithXBounds(int64_t InX) const noexcept
+    {
+        return InX >= MinBounds.X && InX <= MaxBounds.X;
+    }
+
+    Vector2 MinBounds;
+    Vector2 MaxBounds;
     
     Vector2 Position;
     Vector2 BeaconPosition;
@@ -32,13 +92,54 @@ struct TargetPositon
 };
 
 
+bool IsValidBeaconPosition(const std::vector<TargetPosition>& InSensors, const Vector2& InPos) noexcept
+{
+    bool found = true;
+    for (const auto& sensor : InSensors)
+    {
+        if (!sensor.IsWithinBounds(InPos))
+            continue;
+        if (InPos.ManDistanceWithin(sensor.Position, sensor.ClosestDistance))
+        {
+            found = false;
+            break;
+        }
+    }
+    return found;
+}
+
+void TestFrequencies(const std::vector<TargetPosition>& InSensors, int64_t InStart, int64_t InEnd)
+{
+    std::vector<TargetPosition> selectedSensors;
+    selectedSensors.reserve(InSensors.size());
+    for (int64_t x = InStart; x <= InEnd; ++x)
+    {
+        for (const auto& sensor : InSensors)
+        {
+            if (sensor.IsWithXBounds(x))
+                selectedSensors.push_back(sensor);
+        }
+        
+        for (int64_t y = 0; y <= CheckExtent; ++y)
+        {
+            Vector2 pos(x, y);
+            if (IsValidBeaconPosition(selectedSensors, pos))
+                std::cout << std::endl << "Frequency: " << 4000000 * x + y << std::endl;
+        }
+        if (InStart == 0 && x % 400 == 0)
+        {
+            std::cout << "Progress: " <<  (x * 100.f) / InEnd << "%" << std::endl;
+        }
+        selectedSensors.clear();
+    }
+}
 
 int main(int /*InArgc*/, char* /*InArgv[]*/)
 {
     std::ifstream inputFile;
     inputFile.open(Filename);
     std::string inputLine;
-    std::vector<TargetPositon> sensors;
+    std::vector<TargetPosition> sensors;
     int64_t minX(std::numeric_limits<int64_t>::max());
     int64_t maxX(std::numeric_limits<int64_t>::min());
     int64_t maxDistance(std::numeric_limits<int64_t>::min());
@@ -53,40 +154,28 @@ int main(int /*InArgc*/, char* /*InArgv[]*/)
         ss.ignore(25), ss >> beacon.X, ss.ignore(4),  ss >> beacon.Y;
         minX= std::min(sensor.X, std::min(beacon.X, minX));
         maxX = std::max(sensor.X, std::max(beacon.X, maxX));
-        TargetPositon targetPosition(sensor, beacon);
+        TargetPosition targetPosition(sensor, beacon);
         minX= std::min(sensor.X, std::min(beacon.X, minX));
         maxX = std::max(sensor.X, std::max(beacon.X, maxX));
         maxDistance = std::max(targetPosition.ClosestDistance, maxDistance);
         sensors.emplace_back(targetPosition);
     }
-    constexpr int checkLine = 10;
-
-    int64_t nonBeaconPosition = 0;
-    for (int64_t x = minX -maxDistance; x <= maxX + maxDistance; ++x)
+    
     {
-        Vector2 pos(x, checkLine);
-        bool found = true;
-        for (const auto& sensor : sensors)
+        Timer t("Test time");
+        std::vector<std::jthread> threads;
+        int64_t sliceSize = CheckExtent / ThreadCount;
+        for (int64_t a = 0; a < ThreadCount; ++a)
         {
-            if (sensor.BeaconPosition == pos)
+            threads.emplace_back([a, sliceSize, &sensors]
             {
-                found = true;
-                break;
-            }
-            // ..####B######################..
-            if (pos.ManDistance(sensor.Position) <= sensor.ClosestDistance)
-                found = false;
+               TestFrequencies(sensors, sliceSize * a, std::min(sliceSize*(a + 1), CheckExtent)); 
+            });
         }
-        if (!found)
+        for (auto& thread : threads)
         {
-            nonBeaconPosition++;
-            //std::cout << "#";
-        }
-        else
-        {
-            //std::cout << ".";
+            thread.join();
         }
     }
-    std::cout << std::endl << "Non-beacon locations: " << nonBeaconPosition << std::endl;
     return 0;
 }
